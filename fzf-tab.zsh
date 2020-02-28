@@ -306,22 +306,23 @@ _fzf_tab_complete() {
 
 zle -C _fzf_tab_complete complete-word _fzf_tab_complete
 
+fzf-tab-check-complete() {
+    typeset -g _fzf_tab_should_complete=1
+}
+
 fzf-tab-complete() {
     # complete or not complete, this is a question
     # this name must be ugly to avoid clashes
     local -i _fzf_tab_continue=1 _fzf_tab_should_complete=0
+    local -a compprefuncs_bak=($compprefuncs)
     while (( _fzf_tab_continue )); do
         _fzf_tab_should_complete=0
         _fzf_tab_continue=0
         if (( ${+functions[_main_complete]} )); then
-            # hack: hook _main_complete to check whether completion function will be called
-            local orig_main_complete=${functions[_main_complete]}
-            function _main_complete() { typeset -g _fzf_tab_should_complete=1; }
-            {
-                zle $_fzf_tab_orig_widget
-            } always {
-                functions[_main_complete]=$orig_main_complete
-            }
+            # check whether completion function will be called
+            compprefuncs=(fzf-tab-check-complete return)
+            zle $_fzf_tab_orig_widget
+            compprefuncs=($compprefuncs_bak)  # should be clear once used?
         fi
         # must run with user options; don't add `emulate -L zsh` above this line
         (( ! _fzf_tab_should_complete )) || zle _fzf_tab_complete
